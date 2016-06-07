@@ -61,7 +61,7 @@ of the following commands, or open a root shell with `sudo su -`.
 1. Install [certbot](https://certbot.eff.org/) (Let's Encrypt client). Example for CentOS 7.
 ```
 yum install epel-release
-yum install certbot
+yum install git certbot
 ```
 
 2. Clone this tool into /usr/local. This will create new directory, /usr/local/letsencrypt-vesta.
