@@ -1,0 +1,62 @@
+---
+- hosts: localhost
+
+  tasks:
+
+  - name: Install epel
+    package:
+      name: epel-release
+      state: present
+
+  - name: Install prerequisites
+    package:
+      name: "{{ item }}"
+      state: present
+    with_items:
+      - git
+      - certbot
+
+  - name: Get letsencrypt-vesta
+    git:
+      repo: 'https://github.com/pschiffe/letsencrypt-vesta.git'
+      dest: /usr/local/letsencrypt-vesta
+
+  - name: Symlink letsencrypt-vesta to bin
+    file:
+      src: /usr/local/letsencrypt-vesta/letsencrypt-vesta
+      dest: /usr/local/bin/letsencrypt-vesta
+      state: link
+
+  - name: Create /etc/letsencrypt/webroot
+    file:
+      dest: /etc/letsencrypt/webroot
+      state: directory
+
+  - name: Symlink apache conf
+    file:
+      src: /usr/local/letsencrypt-vesta/letsencrypt.conf
+      dest: /etc/httpd/conf.d/letsencrypt.conf
+      state: link
+    notify:
+      - restart httpd
+
+  - name: Cron MAILTO variable
+    cron:
+      name: MAILTO
+      env: yes
+      value: root
+      state: present
+
+  - name: Cron for renewal
+    cron:
+      name: letsencrypt renewal
+      state: present
+      special_time: monthly
+      job: /usr/local/bin/letsencrypt-vesta -m [admin@example.com] -u [user] [domain]
+
+  handlers:
+
+  - name: restart httpd
+    service:
+      name: httpd
+      state: restarted
