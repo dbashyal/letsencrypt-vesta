@@ -1,35 +1,32 @@
-Automate Let's Encrypt Certificate Installation for VestaCP
-===========================================================
+# Automate Let's Encrypt Certificate Installation for VestaCP
 
 VestaCP is an open-source web hosting control panel permits website owners to manage their sites through
-an easy to use web interface.  Vesta supports optional secure web hosting via HTTPS.
+and easy to use web interface. Vesta supports optional secure web hosting via HTTPS.
 
 Let's Encrypt is a new certificate authority (CA) that issues free domain validated (DV) SSL/TLS
 certificates for enabling secure (HTTPS) web connections. Let's Encrypt automates the certificate request
 process, making it possible to secure a domain with a single command.
 
-This tool bridges the gap between Vesta's certificate management and the Certbot client used to install 
-Let's Encrypt certificates.  Given one or more Vesta user accounts and, optionally, a list of domain names,
-it verifies that the domains exist in Vesta, requests a certificate for each domain and all associated 
-aliases, and (upon successful validation) installs the certificate on each domain.
+This tool bridges the gap between Vesta's certificate management and the Let's Encrypt client. Given one
+or more Vesta user accounts and, optionally, a list of domain names, it verifies that the domains exist
+in Vesta, requests a certificate for each domain and all associated aliases, and (upon successful
+validation) installs the certificate on each domain.
 
 The Certbot client currently requires Python 2.7.
 
-Update
-------
+## Update
 
 This update fixes a critical bug introduced by the removal of v-list-web-domains-alias in Vesta
 0.9.8-16.  We have also switched from doing full web server restarts after installing certificates
 to doing configuration reloads.
 
 Recently, the Let's Encrypt project decoupled the ACME client from the Let's Encrypt certificate
-authority.  If you haven't already done so, be sure to install the new Certbot client, as the 
+authority.  If you haven't already done so, be sure to install the new Certbot client, as the
 script no longer works with letsencrypt-auto.
 
-Usage
------
+## Usage
 
-Once installed, certificates can be requested by running letsencrypt-vesta command.  Several options
+Once installed, certificates can be requested by running letsencrypt-vesta command. Several options
 can be passed to determine which domains will be included in the certificate:
 
     sudo letsencrypt-vesta [-a days] [-m email] [-u] user1 [domainlist1] [...-u userN [domainlistN]]
@@ -40,14 +37,13 @@ can be passed to determine which domains will be included in the certificate:
 * Multiple `-u` options can be specified to include domains across multiple Vesta accounts.  For backwards compatibility, the `-u` is optional for the first account.
 
 The same command is used to request new certificates and to renew previously installed certificates.
-Note that Let's Encrypt certificates expire every 90 days.  It's recommended to renew them after
+Note that Let's Encrypt certificates expire every 90 days. It's recommended to renew them after
 60 days.
 
 If a site doesn't already have SSL support it will be enabled with public_html as the SSL home.
-Otherwise, the existing SSL certificate will be replaced with the one issued by Let's Encrypt. 
+Otherwise, the existing SSL certificate will be replaced with the one issued by Let's Encrypt.
 
-How It Works
-------------
+## How It Works
 
 Given one or more Vesta-managed usernames and an optional list of domains hosted under that user account, letsencrypt-vesta does the following:
 
@@ -57,78 +53,86 @@ Given one or more Vesta-managed usernames and an optional list of domains hosted
 * Uses Vesta's command line tools to install the certificate on each site.
 * If the `-a` option is specified and the at scheduler is available, the same command will be scheduled to run again in the specified number of days (60 is recommended).  This will perpetually schedule regular, automatic updates to the certificate without user intervention.
 
-Installation
-------------
+## Installation
 
-Installation must be done as root.  If your system doesn't support root logins, append `sudo` to each
+Installation must be done as root. If your system doesn't support root logins, append `sudo` to each
 of the following commands, or open a root shell with `sudo su -`.
 
-1. Clone both the Let's Encrypt client and this tool into /usr/local.  This will create two new directories, /usr/local/certbot and /usr/local/letsencrypt-vesta.
+1. Install [certbot](https://certbot.eff.org/) (Let's Encrypt client). Example for CentOS 7.
+```
+yum install epel-release
+yum install certbot
+```
 
-        cd /usr/local
-        git clone https://github.com/certbot/certbot.git
-        git clone https://github.com/interbrite/letsencrypt-vesta.git
+2. Clone this tool into /usr/local. This will create new directory, /usr/local/letsencrypt-vesta.
+```
+cd /usr/local
+git clone https://github.com/pschiffe/letsencrypt-vesta.git
+```
 
-2. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.
-    
-        mkdir -p /etc/letsencrypt/webroot
+3. Symlink letsencrypt-vesta in /usr/local/bin for easier access. This allows it to be run without needing to know the full path to the programs.
+```
+ln -s /usr/local/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta
+```
 
-3. Choose to implement either the Apache configuration or Nginx configuration (both below) depending on your specific server configuration (the Apache configuration is recommended unless you're only running Nginx).
+4. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.
+```
+mkdir -p /etc/letsencrypt/webroot
+```
 
-4. Symlink certbot-auto and letsencrypt-vesta in /usr/local/bin for easier access.  This allows them to be run without needing to know the full path to the programs.
+5. Choose to implement either the Apache configuration or Nginx configuration (both below) depending on your specific server configuration (the Apache configuration is recommended unless you're only running Nginx).
 
-        ln -s /usr/local/certbot/certbot-auto /usr/local/bin/certbot-auto
-        ln -s /usr/local/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta
+6. Create your first certificate.
+```
+letsencrypt-vesta USERNAME DOMAIN
+```
 
-5. Create your first certificate.
-
-        letsencrypt-vesta USERNAME DOMAIN
-
-The first time you run certbot-auto (either via letsencrypt-vesta or separately) it will do some initial setup work that could take a few minutes.  Subsequent runs should be faster, as this setup is only needed once per server.
+The first time you run letsencrypt-auto (either via letsencrypt-vesta or separately) it will do some initial setup work that could take a few minutes. Subsequent runs should be faster, as this setup is only needed once per server.
 
 
 ### Apache Configuration
 
 The Apache configuration is recommended for any server running Apache (with or without Nginx).
 
-1. Symlink the Apache conf file in your Apache conf.d directory. This enables Apache to properly serve the validation files from the webroot directory above.
+1. Symlink the Apache conf file in your Apache conf.d directory. This enables Apache to properly serve the validation files from the webroot directory above. Depending on OS:
+```
+ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/httpd/conf.d/letsencrypt.conf
+ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/apache2/conf.d/letsencrypt.conf
+```
 
-        Depending on OS:
-        ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/httpd/conf.d/letsencrypt.conf
-        ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/apache2/conf.d/letsencrypt.conf
-
-2. Restart Apache to pick up the configuration change.
-
-        Depending on OS:
-        service httpd restart
-        service apache2 restart
+2. Restart Apache to pick up the configuration change. Depending on OS:
+```
+systemctl restart httpd
+service apache2 restart
+```
 
 ### Nginx Configuration
 
-The Nginx configuration is best suited to servers _not_ running Apache.  On servers running both web servers, the Apache configuration is recommended.
+The Nginx configuration is best suited to servers _not_ running Apache. On servers running both web servers, the Apache configuration is recommended.
 
-1. Add the following to any of the Nginx virtual host configuration templates you plan to use.  Templates can be found in /usr/local/vesta/data/templates/web/nginx and /usr/local/vesta/data/templates/web/nginx/php5-fpm.  You should add this block along with the other "location" blocks in the file and before the "location @fallback" block, if one exists.
+1. Add the following to any of the Nginx virtual host configuration templates you plan to use. Templates can be found in /usr/local/vesta/data/templates/web/nginx and /usr/local/vesta/data/templates/web/nginx/php5-fpm. You should add this block along with the other "location" blocks in the file and before the "location @fallback" block, if one exists.
+```
+location /.well-known/acme-challenge {
+  default_type text/plain;
+  root /etc/letsencrypt/webroot;
+}
+```
 
-        location /.well-known/acme-challenge {
-            default_type text/plain;
-            root /etc/letsencrypt/webroot;
-        }
-
-
-2. Reapply the modified template to each existing account with the following command.  This will enable existing sites to use Let's Encrypt certificates.
-
-        /usr/local/vesta/bin/v-rebuild-web-domains USERNAME
+2. Reapply the modified template to each existing account with the following command. This will enable existing sites to use Let's Encrypt certificates.
+```
+/usr/local/vesta/bin/v-rebuild-web-domains USERNAME
+```
 
 3. Restart Nginx to pick up the configuration changes.
+```
+service nginx restart
+```
 
-        service nginx restart
-
-Updating
---------
+## Updating
 
 To ensure you are using the latest version of letsencrypt-vesta, run the following:
 
-    cd /usr/local/letsencrypt-vesta  
+    cd /usr/local/letsencrypt-vesta
     git pull origin master
 
 Also be sure you have replaced the original Let's Encrypt client with the new Certbot client if you've been running letsencrypt-vesta for a while.  See the installation instructions above for details.
