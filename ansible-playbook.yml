@@ -17,6 +17,9 @@
       - certbot
       - at
 
+  - name: Enable atd
+    service: name=atd state=started enabled=yes
+
   - name: Get letsencrypt-vesta
     git:
       repo: 'https://github.com/pschiffe/letsencrypt-vesta.git'
