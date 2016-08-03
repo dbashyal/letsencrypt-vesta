@@ -15,6 +15,7 @@
     with_items:
       - git
       - certbot
+      - at
 
   - name: Get letsencrypt-vesta
     git:
@@ -39,20 +40,6 @@
       state: link
     notify:
       - restart httpd
-
-  - name: Cron MAILTO variable
-    cron:
-      name: MAILTO
-      env: yes
-      value: root
-      state: present
-
-  - name: Cron for renewal
-    cron:
-      name: letsencrypt renewal
-      state: present
-      special_time: monthly
-      job: /usr/local/bin/letsencrypt-vesta -m [admin@example.com] -u [user] [domain]
 
   handlers:
 
